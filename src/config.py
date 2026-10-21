@@ -31,7 +31,7 @@ def parse_test_mode(value: str) -> bool:
         return True
     if normalized in FALSE_VALUES:
         return False
-    message = f"неверное значение режима тестового репозитория: {value}"
+    message = f"неверное значение режима: {value}"
     raise argparse.ArgumentTypeError(message)
 
 
@@ -86,17 +86,18 @@ def format_test_mode(value: bool | None) -> str:
 
 def print_config(args: Namespace) -> None:
     """Печатает отладочный вывод всех параметров запуска."""
+    test_mode = format_test_mode(args.test_mode)
     print("Параметры запуска:")
     print(f"  Имя пакета: {format_param(args.package)}")
     print(f"  Репозиторий: {format_param(args.repo)}")
-    print(f"  Режим тестового репозитория: {format_test_mode(args.test_mode)}")
+    print(f"  Режим тестового репозитория: {test_mode}")
     print(f"  Версия пакета: {format_param(args.package_version)}")
 
 
 def validate_package(name: str | None) -> None:
-    """Проверяет имя пакета, если оно задано."""
+    """Проверяет, что имя пакета задано и корректно."""
     if name is None:
-        return
+        raise ConfigError("имя пакета не задано")
     stripped = name.strip()
     if not stripped:
         raise ConfigError("имя пакета не задано")
@@ -125,13 +126,9 @@ def is_repo_url(value: str) -> bool:
 
 def validate_repo(repo: str | None, test_mode: bool | None) -> None:
     """Проверяет URL репозитория или путь к тестовому файлу."""
-    if repo is None:
-        if test_mode:
-            raise ConfigError("для тестового режима нужен путь к файлу репозитория")
-        return
-    stripped = repo.strip()
-    if not stripped:
+    if repo is None or not repo.strip():
         raise ConfigError("репозиторий не задан")
+    stripped = repo.strip()
     if test_mode:
         path = Path(stripped)
         if not path.is_file():

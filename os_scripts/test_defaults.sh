@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 echo "=== Без параметров ==="
-python3 -m src.visualizer
+python3 -m src.visualizer || true
 
 echo "=== Все параметры (URL) ==="
 python3 -m src.visualizer \

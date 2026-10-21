@@ -13,6 +13,16 @@ run_case() {
     echo
 }
 
+run_case "Имя пакета не задано" \
+    --repo https://pypi.org/simple \
+    --test-mode off \
+    --package-version 3.0.3
+
+run_case "Репозиторий не задан" \
+    --package flask \
+    --test-mode off \
+    --package-version 3.0.3
+
 run_case "Пустое имя пакета" \
     --package "" \
     --repo https://pypi.org/simple \

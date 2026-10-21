@@ -88,6 +88,12 @@ class TestParseArgs(unittest.TestCase):
 class TestValidateParameters(unittest.TestCase):
     """Проверяет обработку ошибок для каждого параметра."""
 
+    def test_missing_package(self) -> None:
+        """Отсутствующее имя пакета отклоняется."""
+        with self.assertRaises(ConfigError) as ctx:
+            validate_package(None)
+        self.assertEqual(str(ctx.exception), "имя пакета не задано")
+
     def test_empty_package(self) -> None:
         """Пустое имя пакета отклоняется."""
         with self.assertRaises(ConfigError) as ctx:
@@ -132,13 +138,16 @@ class TestValidateParameters(unittest.TestCase):
         """В тестовом режиме отсутствующий файл вызывает ошибку."""
         with self.assertRaises(ConfigError) as ctx:
             validate_repo("repo/missing.json", True)
-        self.assertIn("файл тестового репозитория не найден", str(ctx.exception))
+        self.assertIn(
+            "файл тестового репозитория не найден",
+            str(ctx.exception),
+        )
 
-    def test_repo_required_in_test_mode(self) -> None:
-        """Тестовый режим без пути к файлу недопустим."""
+    def test_missing_repo(self) -> None:
+        """Отсутствующий репозиторий отклоняется."""
         with self.assertRaises(ConfigError) as ctx:
-            validate_repo(None, True)
-        self.assertIn("нужен путь к файлу репозитория", str(ctx.exception))
+            validate_repo(None, False)
+        self.assertEqual(str(ctx.exception), "репозиторий не задан")
 
     def test_valid_url_repo(self) -> None:
         """Корректный URL принимается вне тестового режима."""
@@ -190,6 +199,16 @@ class TestPrintConfig(unittest.TestCase):
             package_version="3.0.3",
         )
         validate_config(args)
+
+    def test_validate_config_requires_package_and_repo(self) -> None:
+        """Без имени пакета и репозитория запуск отклоняется."""
+        with self.assertRaises(ConfigError) as ctx:
+            validate_config(make_args())
+        self.assertEqual(str(ctx.exception), "имя пакета не задано")
+        args = make_args(package="flask")
+        with self.assertRaises(ConfigError) as ctx:
+            validate_config(args)
+        self.assertEqual(str(ctx.exception), "репозиторий не задан")
 
 
 if __name__ == "__main__":
