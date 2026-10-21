@@ -1,8 +1,7 @@
 # Dependency Visualizer — визуализатор графа зависимостей
 
 Учебный проект: инструмент визуализации графа зависимостей
-для менеджера пакетов (Вариант 29).
-Этап 1 — минимальный прототип с конфигурацией.
+для менеджера пакетов (Вариант 29). Этап 1 — конфигурация.
 
 Готовые средства (менеджеры пакетов, библиотеки) для получения
 зависимостей не используются.
@@ -18,8 +17,6 @@
 chmod +x run.sh
 ./run.sh
 ```
-
-Параметры командной строки:
 
 ```bash
 python3 -m src.visualizer \
@@ -53,21 +50,21 @@ python3 -m src.visualizer \
 ## Структура проекта
 
 ```
-PythonProject2/
+dep-visualizer/
 ├── src/
 │   ├── __init__.py
 │   ├── config.py
 │   ├── visualizer.py
 │   └── main.py
+├── tests/
+│   ├── __init__.py
+│   └── test_config.py
 ├── os_scripts/
 │   ├── test_defaults.sh
 │   ├── test_params.sh
 │   └── test_errors.sh
 ├── repo/
 │   └── test_repo.json
-├── tests/
-│   ├── __init__.py
-│   └── test_config.py
 ├── README.md
 ├── .gitignore
 └── run.sh
