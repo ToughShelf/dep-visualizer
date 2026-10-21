@@ -1,0 +1,47 @@
+{
+  "flask": {
+    "3.0.3": {
+      "dependencies": {
+        "blinker": "1.8.2",
+        "click": "8.1.7",
+        "itsdangerous": "2.2.0",
+        "jinja2": "3.1.4",
+        "werkzeug": "3.0.4"
+      }
+    }
+  },
+  "blinker": {
+    "1.8.2": {
+      "dependencies": {}
+    }
+  },
+  "click": {
+    "8.1.7": {
+      "dependencies": {}
+    }
+  },
+  "itsdangerous": {
+    "2.2.0": {
+      "dependencies": {}
+    }
+  },
+  "jinja2": {
+    "3.1.4": {
+      "dependencies": {
+        "markupsafe": "2.1.5"
+      }
+    }
+  },
+  "markupsafe": {
+    "2.1.5": {
+      "dependencies": {}
+    }
+  },
+  "werkzeug": {
+    "3.0.4": {
+      "dependencies": {
+        "markupsafe": "2.1.5"
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+#!/bin/bash
+# Поочерёдная проверка каждого параметра командной строки.
+
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+echo "=== Только --package ==="
+python3 -m src.visualizer --package flask
+
+echo "=== Только --repo ==="
+python3 -m src.visualizer --repo https://pypi.org/simple
+
+echo "=== Только --test-mode ==="
+python3 -m src.visualizer --test-mode off
+
+echo "=== Только --package-version ==="
+python3 -m src.visualizer --package-version 3.0.3
+
+echo "=== Все параметры ==="
+python3 -m src.visualizer \
+    --package flask \
+    --repo https://pypi.org/simple \
+    --test-mode off \
+    --package-version 3.0.3
