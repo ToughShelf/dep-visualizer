@@ -5,7 +5,7 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from src.graph import invert_adjacency, recursive_bfs
+from src.graph import recursive_bfs
 from src.repository import (
     RepoError,
     get_direct_dependencies,
@@ -117,22 +117,6 @@ class TestTestRepoDeps(unittest.TestCase):
             True,
         )
         self.assertEqual(deps, ["B", "C"])
-
-
-class TestInvert(unittest.TestCase):
-    """Заготовка обратного графа для следующего этапа."""
-
-    def test_invert_diamond(self) -> None:
-        """У D появляются входящие B и C."""
-        adj = {
-            "A": ["B", "C"],
-            "B": ["D"],
-            "C": ["D"],
-            "D": [],
-        }
-        reverse = invert_adjacency(adj)
-        self.assertEqual(sorted(reverse["D"]), ["B", "C"])
-        self.assertEqual(reverse["A"], [])
 
 
 if __name__ == "__main__":

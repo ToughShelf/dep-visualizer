@@ -60,17 +60,3 @@ def recursive_bfs(
 
     bfs([start])
     return adjacency, cycles, order
-
-
-def invert_adjacency(
-    adjacency: dict[str, list[str]],
-) -> dict[str, list[str]]:
-    """Строит граф обратных зависимостей."""
-    reverse: dict[str, list[str]] = {node: [] for node in adjacency}
-    for src, dests in adjacency.items():
-        reverse.setdefault(src, [])
-        for dst in dests:
-            reverse.setdefault(dst, [])
-            if src not in reverse[dst]:
-                reverse[dst].append(src)
-    return reverse
