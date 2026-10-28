@@ -8,12 +8,20 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from src.graph import NeighborFn
+
 USER_AGENT = "dep-visualizer/0.2"
 HTTP_TIMEOUT = 20
 SIMPLE_SUFFIX = "/simple"
 PYPI_SUFFIX = "/pypi"
 HTTP_NOT_FOUND = 404
 NAME_PATTERN = re.compile(r"[-_.]+")
+REQ_NAME_PATTERN = re.compile(
+    r"^([A-Za-z0-9][A-Za-z0-9._+\-]*)",
+)
+EQ_VERSION_PATTERN = re.compile(r"==\s*([A-Za-z0-9._+\-]+)")
+GRAPH_WILDCARD = "*"
+COMMENT_PREFIX = "#"
 CERT_CANDIDATES = (
     "/etc/ssl/cert.pem",
     "/opt/homebrew/etc/openssl@3/cert.pem",
@@ -74,6 +82,86 @@ def deps_from_pypi_json(payload: dict[str, Any]) -> list[str]:
     return result
 
 
+def parse_graph_text(raw: str) -> dict[str, list[str]]:
+    """Читает граф пакетов A-Z из текстового описания."""
+    adjacency: dict[str, list[str]] = {}
+    for line_no, line in enumerate(raw.splitlines(), 1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith(COMMENT_PREFIX):
+            continue
+        if ":" not in stripped:
+            raise RepoError(f"некорректная строка графа: {line_no}")
+        name, _, rest = stripped.partition(":")
+        name = name.strip()
+        _check_letter_name(name)
+        deps = rest.split()
+        for dep in deps:
+            _check_letter_name(dep)
+        adjacency[name] = deps
+        for dep in deps:
+            adjacency.setdefault(dep, [])
+    if not adjacency:
+        raise RepoError("пустой граф тестового репозитория")
+    return adjacency
+
+
+def _check_letter_name(name: str) -> None:
+    """Имя пакета в тестовом графе — заглавные латинские буквы."""
+    if not name or not name.isalpha() or name != name.upper():
+        raise RepoError(
+            f"пакет должен быть заглавными буквами: {name}",
+        )
+
+
+def graph_to_json(adjacency: dict[str, list[str]]) -> dict[str, Any]:
+    """Превращает текстовый граф в формат тестового JSON."""
+    data: dict[str, Any] = {}
+    for pkg, deps in adjacency.items():
+        data[pkg] = {
+            GRAPH_WILDCARD: {
+                "dependencies": {dep: "" for dep in deps},
+            },
+        }
+    return data
+
+
+def split_requirement(spec: str) -> tuple[str, str | None]:
+    """Выделяет имя пакета и точную версию из строки зависимости."""
+    text = spec.strip()
+    match = REQ_NAME_PATTERN.match(text)
+    if match is None:
+        raise RepoError(f"некорректная зависимость: {spec}")
+    name = match.group(1)
+    exact = EQ_VERSION_PATTERN.search(text)
+    if exact is not None:
+        return name, exact.group(1)
+    return name, None
+
+
+def pypi_project_url(repo: str, package: str) -> str:
+    """Строит URL JSON-API проекта без номера версии."""
+    base = repo.rstrip("/")
+    lowered = base.lower()
+    if lowered.endswith(SIMPLE_SUFFIX):
+        base = base[: -len(SIMPLE_SUFFIX)]
+        lowered = base.lower()
+    if lowered.endswith(PYPI_SUFFIX):
+        return f"{base}/{package}/json"
+    return f"{base}/pypi/{package}/json"
+
+
+def fetch_latest_version(repo: str, package: str) -> str:
+    """Берёт актуальную версию пакета из JSON-API."""
+    payload = fetch_pypi_json(pypi_project_url(repo, package))
+    info = payload.get("info")
+    if not isinstance(info, dict):
+        raise RepoError("некорректный ответ репозитория")
+    version = info.get("version")
+    if not isinstance(version, str) or not version:
+        raise RepoError(f"версия не найдена: {package}")
+    return version
+
+
 def deps_from_test_data(
     data: dict[str, Any],
     package: str,
@@ -86,6 +174,8 @@ def deps_from_test_data(
     if not isinstance(versions, dict):
         raise RepoError("некорректный тестовый репозиторий")
     info = versions.get(version)
+    if info is None:
+        info = versions.get(GRAPH_WILDCARD)
     if info is None:
         raise RepoError(f"версия не найдена: {package} {version}")
     if not isinstance(info, dict):
@@ -124,13 +214,57 @@ def load_test_repo(path: str) -> dict[str, Any]:
         ) from error
     try:
         data = json.loads(raw)
-    except json.JSONDecodeError as error:
-        raise RepoError(
-            "некорректный JSON тестового репозитория",
-        ) from error
+    except json.JSONDecodeError:
+        return graph_to_json(parse_graph_text(raw))
     if not isinstance(data, dict):
         raise RepoError("некорректный тестовый репозиторий")
+    if _is_simple_adjacency(data):
+        return graph_to_json(_simple_json_to_graph(data))
     return data
+
+
+def _is_simple_adjacency(data: dict[str, Any]) -> bool:
+    """Проверяет JSON вида {"A": ["B", "C"]}."""
+    if not data:
+        return False
+    return all(isinstance(value, list) for value in data.values())
+
+
+def _simple_json_to_graph(data: dict[str, Any]) -> dict[str, list[str]]:
+    """Читает простой JSON-граф с именами A-Z."""
+    adjacency: dict[str, list[str]] = {}
+    for pkg, deps in data.items():
+        name = str(pkg)
+        _check_letter_name(name)
+        names = [str(dep) for dep in deps]
+        for dep in names:
+            _check_letter_name(dep)
+        adjacency[name] = names
+        for dep in names:
+            adjacency.setdefault(dep, [])
+    return adjacency
+
+
+def load_full_adjacency(path: str) -> dict[str, list[str]]:
+    """Загружает полный граф тестового репозитория."""
+    data = load_test_repo(path)
+    adjacency: dict[str, list[str]] = {}
+    for pkg, versions in data.items():
+        if not isinstance(versions, dict) or not versions:
+            continue
+        info = versions.get(GRAPH_WILDCARD)
+        if info is None:
+            info = next(iter(versions.values()))
+        if not isinstance(info, dict):
+            continue
+        deps = info.get("dependencies", {})
+        if not isinstance(deps, dict):
+            continue
+        names = [str(name) for name in deps]
+        adjacency[str(pkg)] = names
+        for name in names:
+            adjacency.setdefault(name, [])
+    return adjacency
 
 
 def ssl_context() -> ssl.SSLContext:
@@ -194,3 +328,47 @@ def get_direct_dependencies(
     url = pypi_json_url(repo, package, version)
     payload = fetch_pypi_json(url)
     return deps_from_pypi_json(payload)
+
+
+def get_direct_pairs(
+    package: str,
+    version: str,
+    repo: str,
+    test_mode: bool,
+) -> list[tuple[str, str]]:
+    """Возвращает пары имя-версия прямых зависимостей."""
+    specs = get_direct_dependencies(
+        package,
+        version,
+        repo,
+        test_mode,
+    )
+    pairs: list[tuple[str, str]] = []
+    for spec in specs:
+        name, dep_version = split_requirement(spec)
+        if dep_version is None and not test_mode:
+            dep_version = fetch_latest_version(repo, name)
+        if dep_version is None:
+            dep_version = version
+        pairs.append((name, dep_version))
+    return pairs
+
+
+def make_neighbors(
+    repo: str,
+    test_mode: bool,
+    start_version: str,
+) -> NeighborFn:
+    """Создаёт функцию прямых соседей для обхода BFS."""
+    versions: dict[str, str] = {}
+
+    def neighbors(name: str) -> list[str]:
+        version = versions.get(name, start_version)
+        pairs = get_direct_pairs(name, version, repo, test_mode)
+        names: list[str] = []
+        for dep_name, dep_version in pairs:
+            versions[dep_name] = dep_version
+            names.append(dep_name)
+        return names
+
+    return neighbors

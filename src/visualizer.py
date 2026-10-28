@@ -1,41 +1,56 @@
 """Визуализатор графа зависимостей пакетов.
 
-Этап 2: сбор прямых зависимостей.
+Этап 3: транзитивный граф, BFS с рекурсией, циклы.
 """
 
 from src.config import ConfigError, parse_args, validate_config
-from src.repository import RepoError, get_direct_dependencies
+from src.graph import recursive_bfs
+from src.repository import RepoError, make_neighbors
 
 
-def print_dependencies(
+def print_graph(
     package: str,
-    version: str,
-    deps: list[str],
+    adjacency: dict[str, list[str]],
+    cycles: list[tuple[str, str]],
 ) -> None:
-    """Печатает прямые зависимости пакета."""
-    print(f"Прямые зависимости {package}=={version}:")
-    if not deps:
+    """Печатает транзитивный граф и найденные циклы."""
+    print(f"Граф зависимостей {package}:")
+    edges = [
+        (src, dst)
+        for src, dests in adjacency.items()
+        for dst in dests
+    ]
+    if not edges:
+        print("  (нет)")
+    else:
+        for src, dst in edges:
+            print(f"  {src} -> {dst}")
+    print("Циклические зависимости:")
+    if not cycles:
         print("  (нет)")
         return
-    for dep in deps:
-        print(f"  {dep}")
+    for src, dst in cycles:
+        print(f"  {src} -> {dst}")
 
 
 def main() -> None:
-    """Точка входа: читает зависимости и печатает их."""
+    """Точка входа: строит граф BFS и печатает его."""
     args = parse_args()
     try:
         validate_config(args)
-        deps = get_direct_dependencies(
-            package=args.package,
-            version=args.package_version,
-            repo=args.repo,
-            test_mode=bool(args.test_mode),
+        neighbors = make_neighbors(
+            args.repo,
+            bool(args.test_mode),
+            args.package_version,
+        )
+        adjacency, cycles, _order = recursive_bfs(
+            args.package,
+            neighbors,
         )
     except (ConfigError, RepoError) as error:
         print(f"Ошибка: {error}")
         raise SystemExit(1) from error
-    print_dependencies(args.package, args.package_version, deps)
+    print_graph(args.package, adjacency, cycles)
 
 
 if __name__ == "__main__":

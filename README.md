@@ -1,7 +1,7 @@
 # Dependency Visualizer — визуализатор графа зависимостей
 
 Учебный проект: инструмент визуализации графа зависимостей
-для менеджера пакетов (Вариант 29). Этап 2 — сбор данных.
+для менеджера пакетов (Вариант 29). Этап 3 — основные операции.
 
 Готовые средства (менеджеры пакетов, библиотеки) для получения
 зависимостей не используются. Формат пакетов — Python (pip).
@@ -14,30 +14,11 @@
 ## Быстрый старт
 
 ```bash
-chmod +x run.sh
-./run.sh \
-    --package flask \
-    --repo https://pypi.org/simple \
-    --test-mode off \
-    --package-version 3.0.3
-```
-
-```bash
 python3 -m src.visualizer \
-    --package flask \
-    --repo https://pypi.org/simple \
-    --test-mode off \
-    --package-version 3.0.3
-```
-
-Тестовый репозиторий:
-
-```bash
-python3 -m src.visualizer \
-    --package flask \
-    --repo repo/test_repo.json \
+    --package A \
+    --repo repo/graph_diamond.txt \
     --test-mode on \
-    --package-version 3.0.3
+    --package-version 1
 ```
 
 | Параметр            | Назначение                                 |
@@ -47,69 +28,61 @@ python3 -m src.visualizer \
 | `--test-mode`       | Режим тестового репозитория (`on`/`off`)   |
 | `--package-version` | Версия пакета                              |
 
-`--package`, `--repo` и `--package-version` обязательны.
-Программа запрашивает метаданные указанной версии пакета
-по URL репозитория (JSON-API pip/PyPI) или из тестового файла
-и печатает прямые зависимости.
+Программа строит транзитивный граф зависимостей обходом BFS
+с рекурсией и печатает рёбра и циклы.
+
+## Тестовый репозиторий
+
+В `--test-mode on` вместо URL указывается файл описания графа.
+Пакеты называются заглавными латинскими буквами:
+
+```
+A: B C
+B: D
+C: D
+D:
+```
+
+Примеры: `repo/graph_tree.txt`, `graph_diamond.txt`,
+`graph_chain.txt`, `graph_cycle.txt`, `graph_self.txt`.
 
 ## Структура проекта
 
 ```
 dep-visualizer/
 ├── src/
-│   ├── __init__.py
 │   ├── config.py
+│   ├── graph.py
 │   ├── repository.py
-│   ├── visualizer.py
-│   └── main.py
+│   └── visualizer.py
 ├── tests/
-│   ├── __init__.py
 │   ├── test_config.py
+│   ├── test_graph.py
 │   └── test_repository.py
 ├── os_scripts/
-│   ├── test_defaults.sh
-│   ├── test_params.sh
-│   ├── test_errors.sh
-│   └── test_deps.sh
+│   ├── test_graph.sh
+│   └── ...
 ├── repo/
-│   └── test_repo.json
+│   ├── graph_tree.txt
+│   ├── graph_diamond.txt
+│   ├── graph_chain.txt
+│   ├── graph_cycle.txt
+│   └── graph_self.txt
 ├── README.md
 ├── .gitignore
 └── run.sh
 ```
 
-## Сбор зависимостей
-
-pip и сторонние библиотеки не используются. Зависимости читаются:
-
-- из JSON-API репозитория: `{repo}/pypi/{пакет}/{версия}/json`
-- либо из файла тестового репозитория при `--test-mode on`
-
-Печатаются только прямые зависимости заданной версии.
-
-## Обработка ошибок
-
-```
-Ошибка: имя пакета не задано
-Ошибка: репозиторий не задан
-Ошибка: версия пакета не задана
-Ошибка: пакет не найден: missing
-Ошибка: версия не найдена: flask 9.9.9
-Ошибка: пакет или версия не найдены
-```
-
-## Проверка этапа 2
+## Проверка этапа 3
 
 ```bash
 chmod +x os_scripts/*.sh run.sh
-./os_scripts/test_defaults.sh
-./os_scripts/test_params.sh
-./os_scripts/test_errors.sh
-./os_scripts/test_deps.sh
+./os_scripts/test_graph.sh
 python3 -m unittest discover -s tests
 ```
 
 ## Этапы
 
 1. Прототип с конфигурацией — CLI и проверка параметров
-2. Сбор данных (текущий) — прямые зависимости pip
+2. Сбор данных — прямые зависимости pip
+3. Основные операции (текущий) — BFS-граф и циклы

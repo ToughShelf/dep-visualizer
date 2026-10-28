@@ -1,10 +1,8 @@
 """Юнит-тесты получения прямых зависимостей."""
 
-import io
 import json
 import unittest
 import urllib.error
-from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,7 +14,6 @@ from src.repository import (
     pypi_json_url,
     requirement_line,
 )
-from src.visualizer import print_dependencies
 
 REPO_FILE = Path(__file__).resolve().parent.parent / "repo" / "test_repo.json"
 
@@ -127,16 +124,6 @@ class TestTestRepo(unittest.TestCase):
             True,
         )
         self.assertTrue(deps)
-
-    def test_print_dependencies(self) -> None:
-        """На экран выводятся все прямые зависимости."""
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            print_dependencies("flask", "3.0.3", ["blinker==1.8.2"])
-        text = buf.getvalue()
-        self.assertIn("Прямые зависимости flask==3.0.3:", text)
-        self.assertIn("blinker==1.8.2", text)
-
 
 class TestFetchPypi(unittest.TestCase):
     """Проверяет HTTP-запрос к репозиторию без pip."""
