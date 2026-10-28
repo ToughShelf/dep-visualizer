@@ -64,6 +64,23 @@ run_case "Отсутствующий файл тестового репозит�
     --test-mode on \
     --package-version 3.0.3
 
+run_case "Версия пакета не задана" \
+    --package flask \
+    --repo https://pypi.org/simple \
+    --test-mode off
+
+run_case "Пакет не найден в тестовом репозитории" \
+    --package missing \
+    --repo "$ROOT/repo/test_repo.json" \
+    --test-mode on \
+    --package-version 3.0.3
+
+run_case "Версия не найдена в тестовом репозитории" \
+    --package flask \
+    --repo "$ROOT/repo/test_repo.json" \
+    --test-mode on \
+    --package-version 9.9.9
+
 run_case "Пустая версия пакета" \
     --package flask \
     --repo https://pypi.org/simple \

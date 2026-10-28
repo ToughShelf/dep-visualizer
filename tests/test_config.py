@@ -111,6 +111,12 @@ class TestValidateParameters(unittest.TestCase):
         validate_package("flask")
         validate_package("@scope/name")
 
+    def test_missing_version(self) -> None:
+        """Отсутствующая версия отклоняется."""
+        with self.assertRaises(ConfigError) as ctx:
+            validate_version(None)
+        self.assertEqual(str(ctx.exception), "версия пакета не задана")
+
     def test_empty_version(self) -> None:
         """Пустая версия отклоняется."""
         with self.assertRaises(ConfigError) as ctx:
@@ -201,11 +207,15 @@ class TestPrintConfig(unittest.TestCase):
         validate_config(args)
 
     def test_validate_config_requires_package_and_repo(self) -> None:
-        """Без имени пакета и репозитория запуск отклоняется."""
+        """Без имени пакета, версии и репозитория запуск отклоняется."""
         with self.assertRaises(ConfigError) as ctx:
             validate_config(make_args())
         self.assertEqual(str(ctx.exception), "имя пакета не задано")
         args = make_args(package="flask")
+        with self.assertRaises(ConfigError) as ctx:
+            validate_config(args)
+        self.assertEqual(str(ctx.exception), "версия пакета не задана")
+        args = make_args(package="flask", package_version="3.0.3")
         with self.assertRaises(ConfigError) as ctx:
             validate_config(args)
         self.assertEqual(str(ctx.exception), "репозиторий не задан")

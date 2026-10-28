@@ -106,9 +106,9 @@ def validate_package(name: str | None) -> None:
 
 
 def validate_version(version: str | None) -> None:
-    """Проверяет версию пакета, если она задана."""
+    """Проверяет, что версия пакета задана и корректна."""
     if version is None:
-        return
+        raise ConfigError("версия пакета не задана")
     stripped = version.strip()
     if not stripped:
         raise ConfigError("версия пакета не задана")

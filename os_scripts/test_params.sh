@@ -14,23 +14,24 @@ python3 -m src.visualizer --repo https://pypi.org/simple || true
 echo "=== Пакет и репозиторий ==="
 python3 -m src.visualizer \
     --package flask \
-    --repo https://pypi.org/simple
+    --repo https://pypi.org/simple || true
 
 echo "=== Только --test-mode ==="
 python3 -m src.visualizer \
     --package flask \
     --repo https://pypi.org/simple \
-    --test-mode off
+    --test-mode off || true
 
 echo "=== Только --package-version ==="
 python3 -m src.visualizer \
     --package flask \
-    --repo https://pypi.org/simple \
+    --repo "$ROOT/repo/test_repo.json" \
+    --test-mode on \
     --package-version 3.0.3
 
 echo "=== Все параметры ==="
 python3 -m src.visualizer \
     --package flask \
-    --repo https://pypi.org/simple \
-    --test-mode off \
+    --repo "$ROOT/repo/test_repo.json" \
+    --test-mode on \
     --package-version 3.0.3
