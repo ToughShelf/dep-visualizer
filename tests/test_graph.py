@@ -5,14 +5,14 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from src.graph import recursive_bfs
+from src.graph import invert_adjacency, recursive_bfs
 from src.repository import (
     RepoError,
     get_direct_dependencies,
     load_full_adjacency,
     parse_graph_text,
 )
-from src.visualizer import print_graph
+from src.visualizer import print_graph, print_reverse
 
 REPO = Path(__file__).resolve().parent.parent / "repo"
 
@@ -117,6 +117,62 @@ class TestTestRepoDeps(unittest.TestCase):
             True,
         )
         self.assertEqual(deps, ["B", "C"])
+
+
+class TestReverse(unittest.TestCase):
+    """Обратные зависимости тем же BFS."""
+
+    def test_invert_diamond(self) -> None:
+        """У D появляются входящие B и C."""
+        adj = {
+            "A": ["B", "C"],
+            "B": ["D"],
+            "C": ["D"],
+            "D": [],
+        }
+        reverse = invert_adjacency(adj)
+        self.assertEqual(sorted(reverse["D"]), ["B", "C"])
+        self.assertEqual(reverse["A"], [])
+
+    def test_reverse_bfs_diamond(self) -> None:
+        """От D BFS находит B, C и корень A."""
+        adj = load_full_adjacency(str(REPO / "graph_diamond.txt"))
+        inverted = invert_adjacency(adj)
+        _graph, _cycles, order = recursive_bfs(
+            "D",
+            lambda name: inverted.get(name, []),
+        )
+        self.assertEqual(order[0], "D")
+        self.assertEqual(set(order[1:]), {"A", "B", "C"})
+
+    def test_reverse_none_for_root(self) -> None:
+        """От корня A обратных зависимостей нет."""
+        adj = load_full_adjacency(str(REPO / "graph_tree.txt"))
+        inverted = invert_adjacency(adj)
+        _graph, _cycles, order = recursive_bfs(
+            "A",
+            lambda name: inverted.get(name, []),
+        )
+        self.assertEqual(order[1:], [])
+
+    def test_reverse_leaf_json(self) -> None:
+        """В графе с X и Y у A есть обратные X и Y."""
+        adj = load_full_adjacency(str(REPO / "graph_leaf.json"))
+        inverted = invert_adjacency(adj)
+        _graph, _cycles, order = recursive_bfs(
+            "A",
+            lambda name: inverted.get(name, []),
+        )
+        self.assertEqual(set(order[1:]), {"X", "Y"})
+
+    def test_print_reverse(self) -> None:
+        """Обратные зависимости печатаются списком."""
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            print_reverse("D", ["B", "C", "A"])
+        text = buf.getvalue()
+        self.assertIn("Обратные зависимости D:", text)
+        self.assertIn("  B", text)
 
 
 if __name__ == "__main__":

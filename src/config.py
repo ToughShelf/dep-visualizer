@@ -65,6 +65,12 @@ def parse_args(argv: list[str] | None = None) -> Namespace:
         default=None,
         help="Версия пакета",
     )
+    parser.add_argument(
+        "--reverse",
+        dest="reverse",
+        action="store_true",
+        help="Показать обратные зависимости пакета",
+    )
     return parser.parse_args(argv)
 
 
