@@ -100,9 +100,9 @@ class TestPrintGraph(unittest.TestCase):
         with redirect_stdout(buf):
             print_graph("A", {"A": ["B"], "B": ["A"]}, [("B", "A")])
         text = buf.getvalue()
-        self.assertIn("A -> B", text)
-        self.assertIn("B -> A", text)
-        self.assertIn("Циклические зависимости:", text)
+        self.assertIn("graph LR", text)
+        self.assertIn('A["A"]', text)
+        self.assertIn("-->", text)
 
 
 class TestTestRepoDeps(unittest.TestCase):

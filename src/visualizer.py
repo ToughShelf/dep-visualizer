@@ -1,10 +1,11 @@
 """Визуализатор графа зависимостей пакетов.
 
-Этап 4: обратные зависимости тем же BFS.
+Этап 5: описание графа на языке Mermaid.
 """
 
 from src.config import ConfigError, parse_args, validate_config
 from src.graph import invert_adjacency, recursive_bfs
+from src.mermaid import to_mermaid
 from src.repository import (
     RepoError,
     load_full_adjacency,
@@ -17,24 +18,10 @@ def print_graph(
     adjacency: dict[str, list[str]],
     cycles: list[tuple[str, str]],
 ) -> None:
-    """Печатает транзитивный граф и найденные циклы."""
+    """Печатает граф зависимостей на языке Mermaid."""
+    del cycles
     print(f"Граф зависимостей {package}:")
-    edges = [
-        (src, dst)
-        for src, dests in adjacency.items()
-        for dst in dests
-    ]
-    if not edges:
-        print("  (нет)")
-    else:
-        for src, dst in edges:
-            print(f"  {src} -> {dst}")
-    print("Циклические зависимости:")
-    if not cycles:
-        print("  (нет)")
-        return
-    for src, dst in cycles:
-        print(f"  {src} -> {dst}")
+    print(to_mermaid(adjacency))
 
 
 def print_reverse(package: str, names: list[str]) -> None:
