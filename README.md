@@ -40,16 +40,23 @@ graph LR
 
 ## Три пакета
 
+Тестовый репозиторий:
+
 ```bash
-chmod +x os_scripts/test_mermaid.sh
 ./os_scripts/test_mermaid.sh
 ```
-
-Скрипт строит диаграммы для трёх разных пакетов:
 
 - `A` в `repo/graph_diamond.txt` — транзитивный ромб
 - `C` в `repo/graph_chain.txt` — хвост цепочки
 - `B` в `repo/graph_cycle.txt` — пакет внутри цикла
+
+Реальный индекс PyPI, без тестового режима:
+
+```bash
+./os_scripts/test_mermaid_real.sh
+```
+
+Пакеты: `flask` 3.0.3, `click` 8.1.7, `blinker` 1.8.2.
 
 ## Сравнение с инструментами pip
 
@@ -77,6 +84,7 @@ chmod +x os_scripts/test_mermaid.sh
 ```bash
 chmod +x os_scripts/*.sh run.sh
 ./os_scripts/test_mermaid.sh
+./os_scripts/test_mermaid_real.sh
 python3 -m unittest discover -s tests
 ```
 
