@@ -68,6 +68,7 @@ D:
 chmod +x os_scripts/*.sh run.sh
 ./os_scripts/test_graph.sh
 ./os_scripts/test_reverse.sh
+./os_scripts/test_real.sh
 python3 -m unittest discover -s tests
 ```
 

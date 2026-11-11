@@ -11,7 +11,8 @@ from typing import Any
 from src.graph import NeighborFn
 
 USER_AGENT = "dep-visualizer/0.2"
-HTTP_TIMEOUT = 20
+HTTP_TIMEOUT = 60
+HTTP_RETRIES = 3
 SIMPLE_SUFFIX = "/simple"
 PYPI_SUFFIX = "/pypi"
 HTTP_NOT_FOUND = 404
@@ -282,30 +283,42 @@ def ssl_context() -> ssl.SSLContext:
     return context
 
 
-def fetch_pypi_json(url: str) -> dict[str, Any]:
-    """Скачивает JSON метаданных пакета по HTTP."""
+def _read_url(url: str) -> bytes:
+    """Читает тело HTTP-ответа целиком."""
     request = urllib.request.Request(
         url,
         headers={"User-Agent": USER_AGENT},
     )
-    try:
-        with urllib.request.urlopen(
-            request,
-            timeout=HTTP_TIMEOUT,
-            context=ssl_context(),
-        ) as response:
-            raw = response.read()
-    except urllib.error.HTTPError as error:
-        if error.code == HTTP_NOT_FOUND:
-            raise RepoError(
-                "пакет или версия не найдены",
-            ) from error
-        raise RepoError(f"ошибка HTTP {error.code}") from error
-    except urllib.error.URLError as error:
-        reason = getattr(error, "reason", error)
+    with urllib.request.urlopen(
+        request,
+        timeout=HTTP_TIMEOUT,
+        context=ssl_context(),
+    ) as response:
+        return response.read()
+
+
+def fetch_pypi_json(url: str) -> dict[str, Any]:
+    """Скачивает JSON метаданных пакета по HTTP."""
+    last_error: Exception | None = None
+    raw = b""
+    for _attempt in range(HTTP_RETRIES):
+        try:
+            raw = _read_url(url)
+            last_error = None
+            break
+        except urllib.error.HTTPError as error:
+            if error.code == HTTP_NOT_FOUND:
+                raise RepoError(
+                    "пакет или версия не найдены",
+                ) from error
+            raise RepoError(f"ошибка HTTP {error.code}") from error
+        except (urllib.error.URLError, TimeoutError) as error:
+            last_error = error
+    if last_error is not None:
+        reason = getattr(last_error, "reason", last_error)
         raise RepoError(
             f"не удалось обратиться к репозиторию: {reason}",
-        ) from error
+        ) from last_error
     try:
         payload = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
